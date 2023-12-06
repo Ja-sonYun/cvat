@@ -213,6 +213,7 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
             rle: number[];
             points: number[][];
             bounds?: [number, number, number, number];
+            attributes?: { name: string; value: string }[];
         };
         lastestApproximatedPoints: number[][];
         latestRequest: null | {
@@ -409,6 +410,7 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
                     bounds: response.bounds,
                     points: response.points,
                     rle,
+                    attributes: response.attributes,
                 };
                 this.interaction.lastestApproximatedPoints = approximated;
 
@@ -860,6 +862,25 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
             frame, labels, curZOrder, jobInstance, activeLabelID, createAnnotations,
         } = this.props;
 
+        const attributes: Record<number, string> = {}
+        this.interaction.latestResponse.attributes?.forEach((attribute: any) => {
+            const attr_name = attribute.name;
+            let attr_idx = null;
+            labels.every((label: any) => {
+                return label.attributes.every((attr: any) => {
+                    if (attr.name === attr_name) {
+                        attr_idx = attr.id;
+                        return false;
+                    }
+                    return true;
+                })
+            })
+            if (attr_idx === null) {
+                return;
+            }
+            attributes[attr_idx] = attribute.value;
+        })
+
         if (convertMasksToPolygons) {
             const object = new core.classes.ObjectState({
                 frame,
@@ -868,6 +889,7 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
                 label: labels.length ? labels.filter((label: any) => label.id === activeLabelID)[0] : null,
                 shapeType: ShapeType.POLYGON,
                 points: this.interaction.lastestApproximatedPoints.flat(),
+                attributes: attributes,
                 occluded: false,
                 zOrder: curZOrder,
             });
@@ -881,6 +903,7 @@ export class ToolsControlComponent extends React.PureComponent<Props, State> {
                 label: labels.length ? labels.filter((label: any) => label.id === activeLabelID)[0] : null,
                 shapeType: ShapeType.MASK,
                 points: this.interaction.latestResponse.rle,
+                attributes: attributes,
                 occluded: false,
                 zOrder: curZOrder,
             });
